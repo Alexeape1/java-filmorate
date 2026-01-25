@@ -105,15 +105,11 @@ public class UserController {
             throw new ValidationException("Этот email уже используется другим пользователем");
         }
 
-        if (newUser.getEmail() != null) {
-            oldUser.setEmail(newUser.getEmail());
-        }
-        if (newUser.getName() != null) {
-            oldUser.setName(newUser.getName());
-        }
-        if (newUser.getLogin() != null) {
-            oldUser.setLogin(newUser.getLogin());
-        }
+        oldUser.setEmail(newUser.getEmail());
+        oldUser.setName(newUser.getName());
+        oldUser.setLogin(newUser.getLogin());
+        oldUser.setBirthday(newUser.getBirthday());
+
         log.info("Пользователь успешно обновлен. ID: {}, Email: {}", newUser.getId(), newUser.getEmail());
         return oldUser;
     }

@@ -97,6 +97,7 @@ public class FilmController {
             }
             oldFilm.setName(newFilm.getName());
             oldFilm.setDescription(newFilm.getDescription());
+            oldFilm.setReleaseDate(newFilm.getReleaseDate());
             oldFilm.setDuration(newFilm.getDuration());
             log.info("Фильм успешно обновлен. ID: {}, Название: {}",
                     newFilm.getId(), newFilm.getName());
