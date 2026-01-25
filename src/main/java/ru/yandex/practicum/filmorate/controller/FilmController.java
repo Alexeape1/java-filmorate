@@ -28,7 +28,7 @@ public class FilmController {
     }
 
     @PostMapping
-    public Film createFilm(@Valid @RequestBody Film film) {
+    public Film createFilm(@RequestBody Film film) {
         log.info("Получен запрос на добавление нового фильма. Название: {}", film.getName());
 
         if (film.getName() == null || film.getName().isBlank()) {
@@ -65,7 +65,7 @@ public class FilmController {
     }
 
     @PutMapping
-    public Film updateFilm(@Valid @RequestBody Film newFilm) {
+    public Film updateFilm(@RequestBody Film newFilm) {
         log.info("Получен запрос на обновление фильма. ID: {}, Name: {}",
                 newFilm.getId(), newFilm.getName());
         if (newFilm.getId() == null) {

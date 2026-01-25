@@ -25,16 +25,16 @@ public class UserController {
     }
 
     @PostMapping
-    public User createUser(@Valid @RequestBody User user) {
+    public User createUser(@RequestBody User user) {
         log.info("Создание пользователя: {}", user.getEmail());
 
-        if (!user.getEmail().contains("@")) {
-            log.warn("Попытка создания пользователя с email, не содержащим символ: @ (ID: {})", user.getId());
-            throw new ValidationException("электронная почта не может быть пустой и должна содержать символ @");
-        }
         if (user.getEmail() == null || user.getEmail().isBlank()) {
             log.warn("Попытка создания пользователя с пустым email");
-            throw new ValidationException("электронная почта не может быть пустой");
+            throw new ValidationException("email не может быть пустой");
+        }
+        if (!user.getEmail().contains("@")) {
+            log.warn("Попытка создания пользователя с email, не содержащим символ: @ (ID: {})", user.getId());
+            throw new ValidationException("email должен содержать символ @");
         }
         boolean emailExists = users.values().stream()
                 .anyMatch(existingUser -> user.getEmail().equals(existingUser.getEmail()));
@@ -55,7 +55,7 @@ public class UserController {
                     user.getBirthday(), user.getId());
             throw new ValidationException("дата рождения не может быть в будущем");
         }
-        if (user.getName().isBlank() || user.getName() == null) {
+        if (user.getName() == null || user.getName().isBlank()) {
             user.setName(user.getLogin());
         }
 
@@ -75,7 +75,7 @@ public class UserController {
     }
 
     @PutMapping
-    public User updateUser(@Valid @RequestBody User newUser) {
+    public User updateUser(@RequestBody User newUser) {
         log.info("Получен запрос на обновление пользователя. ID: {}, Email: {}",
                 newUser.getId(), newUser.getEmail());
 

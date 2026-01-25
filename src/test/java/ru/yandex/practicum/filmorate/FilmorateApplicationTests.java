@@ -320,7 +320,7 @@ class FilmorateApplicationTests {  // Думаю тут можно раздел�
         ValidationException exception = assertThrows(ValidationException.class,
                 () -> userController.createUser(user));
 
-        assertTrue(exception.getMessage().contains("электронная почта не может быть пустой"));
+        assertTrue(exception.getMessage().contains("email не может быть пустой"));
     }
 
     @Test
@@ -334,7 +334,7 @@ class FilmorateApplicationTests {  // Думаю тут можно раздел�
         ValidationException exception = assertThrows(ValidationException.class,
                 () -> userController.createUser(user));
 
-        assertTrue(exception.getMessage().contains("должна содержать символ @"));
+        assertTrue(exception.getMessage().contains("email должен содержать символ @"));
     }
 
     @Test
