@@ -1,7 +1,6 @@
 package ru.yandex.practicum.filmorate.controller;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.Exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
@@ -14,8 +13,8 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/films")
+@Slf4j
 public class FilmController {
-    private static final Logger log = LoggerFactory.getLogger(FilmController.class);
     private static final int MAX_DESCRIPTION = 200;
     private static final LocalDate CINEMA_BIRTHDAY = LocalDate.of(1895, Month.DECEMBER, 28);
     private final Map<Long, Film> films = new HashMap<>();
@@ -38,6 +37,10 @@ public class FilmController {
             log.warn("Попытка создания фильма с описанием длиной {} символов (максимум {})",
                     film.getDescription().length(), MAX_DESCRIPTION);
             throw new ValidationException("максимальная длина описания — " + MAX_DESCRIPTION + " символов");
+        }
+        if (film.getReleaseDate() == null) {
+            log.warn("Попытка создания фильма без даты релиза");
+            throw new ValidationException("дата релиза не может быть пустой");
         }
         if (film.getReleaseDate().isBefore(CINEMA_BIRTHDAY)) {
             log.warn("Попытка создания фильма с датой релиза {} (раньше {})", film.getReleaseDate(), CINEMA_BIRTHDAY);
@@ -71,33 +74,42 @@ public class FilmController {
             log.warn("Попытка обновления фильма без указания id");
             throw new ValidationException("Id должен быть указан");
         }
-        if (newFilm.getName() == null || newFilm.getName().isBlank()) {
-            log.warn("Попытка обновления фильма без указания названия");
-            throw new ValidationException("название не может быть пустым");
-        }
+
 
         if (films.containsKey(newFilm.getId())) {
             Film oldFilm = films.get(newFilm.getId());
-            if (newFilm.getDescription() != null && newFilm.getDescription().length() > MAX_DESCRIPTION) {
-                log.warn("Попытка обновления фильма с описанием длиной {} символов (максимум {}) (ID: {})",
-                        newFilm.getDescription().length(), MAX_DESCRIPTION, newFilm.getId());
-                throw new ValidationException("максимальная длина описания — " + MAX_DESCRIPTION + " символов");
+            if (newFilm.getDescription() != null) {
+                if (newFilm.getDescription().length() > MAX_DESCRIPTION) {
+                    log.warn("Попытка обновления фильма с описанием длиной {} символов (максимум {}) (ID: {})",
+                            newFilm.getDescription().length(), MAX_DESCRIPTION, newFilm.getId());
+                    throw new ValidationException("максимальная длина описания — " + MAX_DESCRIPTION + " символов");
+                }
+                oldFilm.setDescription(newFilm.getDescription());
             }
-            if (newFilm.getReleaseDate().isBefore(CINEMA_BIRTHDAY)) {
-                log.warn("Попытка обновления фильма с датой релиза {} раньше {}",
-                        newFilm.getName(), newFilm.getReleaseDate());
-                throw new ValidationException("Дата релиза не может быть раньше " + CINEMA_BIRTHDAY);
+            if (newFilm.getName() != null) {
+                if (newFilm.getName().isBlank()) {
+                    log.warn("Попытка обновления фильма с пустым названием (ID: {})", newFilm.getId());
+                    throw new ValidationException("название не может быть пустым");
+                }
+                oldFilm.setName(newFilm.getName());
+            }
+            if (newFilm.getReleaseDate() != null) {
+                if (newFilm.getReleaseDate().isBefore(CINEMA_BIRTHDAY)) {
+                    log.warn("Попытка обновления фильма с датой релиза {} раньше {} (ID: {})",
+                            newFilm.getReleaseDate(), CINEMA_BIRTHDAY, newFilm.getId());
+                    throw new ValidationException("Дата релиза не может быть раньше " + CINEMA_BIRTHDAY);
+                }
+                oldFilm.setReleaseDate(newFilm.getReleaseDate());
             }
 
+            if (newFilm.getDuration() > 0) {
+                oldFilm.setDuration(newFilm.getDuration());
+            }
             if (newFilm.getDuration() <= 0) {
-                log.warn("Попытка обновления фильма {} с некорректной продолжительностью {}",
-                        newFilm.getName(), newFilm.getDuration());
+                log.warn("Попытка обновления фильма {} с некорректной продолжительностью {} (ID: {})",
+                        newFilm.getName(), newFilm.getDuration(), newFilm.getId());
                 throw new ValidationException("Продолжительность фильма должна быть положительным числом");
             }
-            oldFilm.setName(newFilm.getName());
-            oldFilm.setDescription(newFilm.getDescription());
-            oldFilm.setReleaseDate(newFilm.getReleaseDate());
-            oldFilm.setDuration(newFilm.getDuration());
             log.info("Фильм успешно обновлен. ID: {}, Название: {}",
                     newFilm.getId(), newFilm.getName());
             return oldFilm;
