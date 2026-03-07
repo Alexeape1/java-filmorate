@@ -2,13 +2,15 @@ package ru.yandex.practicum.filmorate.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.Rating;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.FilmStorage;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
+import ru.yandex.practicum.filmorate.storage.*;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -19,11 +21,18 @@ public class FilmService {
 
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
+    private final GenreStorage genreStorage;
+    private final RatingStorage ratingStorage;
 
     @Autowired
-    public FilmService(FilmStorage filmStorage, UserStorage userStorage) {
+    public FilmService(@Qualifier("filmDbStorage")FilmStorage filmStorage,
+                       @Qualifier("userDbStorage") UserStorage userStorage,
+                       @Qualifier("genreDbStorage") GenreStorage genreStorage,
+                       @Qualifier("ratingDbStorage") RatingStorage ratingStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
+        this.genreStorage = genreStorage;
+        this.ratingStorage = ratingStorage;
     }
 
     public Collection<Film> findAll() {
@@ -33,12 +42,16 @@ public class FilmService {
     public Film create(Film film) {
         log.info("Создание фильма: {}", film.getName());
         validateFilm(film);
+        validateMpa(film.getMpa());
+        validateGenres(film.getGenres());
         return filmStorage.create(film);
     }
 
     public Film update(Film film) {
         log.info("Обновление фильма с id: {}", film.getId());
         validateFilm(film);
+        validateMpa(film.getMpa());
+        validateGenres(film.getGenres());
         return filmStorage.update(film);
     }
 
@@ -87,6 +100,26 @@ public class FilmService {
         }
         if (film.getDuration() <= 0) {
             throw new ValidationException("Продолжительность фильма должна быть положительной");
+        }
+    }
+
+    private void validateMpa(Rating mpa) {
+        if (mpa != null && mpa.getId() != null) {
+            ratingStorage.findById(mpa.getId())
+                    .orElseThrow(() -> new NotFoundException(
+                            "Рейтинг MPA с id=" + mpa.getId() + " не найден"));
+        }
+    }
+
+    private void validateGenres(Set<Genre> genres) {
+        if (genres != null && !genres.isEmpty()) {
+            for (Genre genre : genres) {
+                if (genre.getId() != null) {
+                    genreStorage.findById(genre.getId())
+                            .orElseThrow(() -> new NotFoundException(
+                                    "Жанр с id=" + genre.getId() + " не найден"));
+                }
+            }
         }
     }
 }
