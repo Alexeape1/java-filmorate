@@ -5,14 +5,20 @@ import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.Rating;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.FilmService;
 import ru.yandex.practicum.filmorate.service.UserService;
 import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
+import ru.yandex.practicum.filmorate.storage.InMemoryGenreStorage;
+import ru.yandex.practicum.filmorate.storage.InMemoryRatingStorage;
 import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -22,19 +28,36 @@ public class FilmServiceTest {
     private UserService userService;
     private Film validFilm;
     private User validUser;
+    private InMemoryGenreStorage genreStorage;
+    private InMemoryRatingStorage ratingStorage;
 
     @BeforeEach
     void setUp() {
         InMemoryFilmStorage filmStorage = new InMemoryFilmStorage();
         InMemoryUserStorage userStorage = new InMemoryUserStorage();
+        genreStorage = new InMemoryGenreStorage();
+        ratingStorage = new InMemoryRatingStorage();
         userService = new UserService(userStorage);
-        filmService = new FilmService(filmStorage, userStorage);
+        filmService = new FilmService(filmStorage, userStorage, genreStorage, ratingStorage);
+
+        Rating testRating = new Rating();
+        testRating.setId(1);
+        testRating.setName("G");
+
+        Genre testGenre = new Genre();
+        testGenre.setId(1);
+        testGenre.setName("Комедия");
+
+        Set<Genre> genres = new HashSet<>();
+        genres.add(testGenre);
 
         validFilm = new Film();
         validFilm.setName("Test Film");
         validFilm.setDescription("Test Description");
         validFilm.setReleaseDate(LocalDate.of(2002, 2, 2));
         validFilm.setDuration(120);
+        validFilm.setMpa(testRating);
+        validFilm.setGenres(genres);
 
         validUser = new User();
         validUser.setEmail("test@example.com");
