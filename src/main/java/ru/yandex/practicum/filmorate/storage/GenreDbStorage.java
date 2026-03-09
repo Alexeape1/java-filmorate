@@ -29,7 +29,7 @@ public class GenreDbStorage implements GenreStorage {
     }
 
     @Override
-    public Optional<Genre> findById(Integer id) {  // Изменено название
+    public Optional<Genre> findById(Integer id) {
         String sql = "SELECT * FROM genres WHERE id = ?";
         try {
             return Optional.ofNullable(jdbcTemplate.queryForObject(sql, this::mapRowToGenre, id));

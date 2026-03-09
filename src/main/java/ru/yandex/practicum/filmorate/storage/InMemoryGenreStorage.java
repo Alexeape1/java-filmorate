@@ -26,7 +26,7 @@ public class InMemoryGenreStorage implements GenreStorage {
     }
 
     @Override
-    public Optional<Genre> findById(Integer id) {  // Изменено название
+    public Optional<Genre> findById(Integer id) {
         return Optional.ofNullable(genres.get(id));
     }
 

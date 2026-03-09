@@ -65,16 +65,12 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Film create(Film film) {
+        log.info("--- FilmDbStorage.create ---");
+        log.info("Получен film: id={}, name={}, mpaId={}, genres.size={}",
+                film.getId(), film.getName(),
+                film.getMpa() != null ? film.getMpa().getId() : "null",
+                film.getGenres() != null ? film.getGenres().size() : 0);
 
-       /* String checkSql = "SELECT COUNT(*) FROM films WHERE LOWER(name) = LOWER(?)";
-        Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, film.getName());
-
-        if (count != null && count > 0) {
-            log.warn("Попытка создания фильма с уже существующим названием: {}", film.getName());
-            throw new ValidationException("Фильм с названием '" + film.getName() + "' уже существует");
-        }
-        Делаю проверку на уникальность названия фильма при его создании, но не проходит проверку в постман.
-        */
         SimpleJdbcInsert simpleJdbcInsert = new SimpleJdbcInsert(jdbcTemplate)
                 .withTableName("films")
                 .usingGeneratedKeyColumns("id");
@@ -86,13 +82,21 @@ public class FilmDbStorage implements FilmStorage {
         parameters.put("duration", film.getDuration());
         parameters.put("rating_id", film.getMpa() != null ? film.getMpa().getId() : null);
 
+        log.info("Параметры для вставки: rating_id={}", parameters.get("rating_id"));
+
         Number id = simpleJdbcInsert.executeAndReturnKey(parameters);
         film.setId(id.longValue());
+        log.info("Фильм вставлен, получен id: {}", id);
 
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
+            log.info("Сохраняем {} жанров для фильма {}", film.getGenres().size(), film.getId());
             saveGenresForFilm(film.getId(), film.getGenres());
+        } else {
+            log.warn("Фильм создается без жанров");
         }
 
+        Set<Genre> savedGenres = loadGenresForFilm(film.getId());
+        film.setGenres(savedGenres);
         log.info("Создан фильм с id: {}", film.getId());
         return film;
     }
@@ -206,11 +210,15 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     private void saveGenresForFilm(Long filmId, Set<Genre> genres) {
+        log.info("Сохранение жанров для фильма {}: {}", filmId,
+                genres.stream().map(Genre::getId).collect(Collectors.toList()));
+
         String sql = "INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)";
         List<Object[]> batchArgs = genres.stream()
                 .map(genre -> new Object[]{filmId, genre.getId()})
                 .collect(Collectors.toList());
 
-        jdbcTemplate.batchUpdate(sql, batchArgs);
+        int[] results = jdbcTemplate.batchUpdate(sql, batchArgs);
+        log.info("Сохранено {} записей о жанрах", results.length);
     }
 }
