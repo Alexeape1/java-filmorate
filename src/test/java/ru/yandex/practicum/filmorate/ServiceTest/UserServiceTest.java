@@ -2,9 +2,12 @@ package ru.yandex.practicum.filmorate.ServiceTest;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import ru.yandex.practicum.filmorate.dto.UserDto;
+import ru.yandex.practicum.filmorate.dto.request.CreateUserRequest;
+import ru.yandex.practicum.filmorate.dto.request.UpdateUserRequest;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
-import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.mapper.UserMapper;
 import ru.yandex.practicum.filmorate.service.UserService;
 import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
 
@@ -16,23 +19,28 @@ import static org.junit.jupiter.api.Assertions.*;
 public class UserServiceTest {
 
     private UserService userService;
-    private User validUser;
+    private UserMapper userMapper;
+    private CreateUserRequest validRequest;
+    private UpdateUserRequest updateRequest;
 
     @BeforeEach
     void setUp() {
         InMemoryUserStorage userStorage = new InMemoryUserStorage();
-        userService = new UserService(userStorage);
+        userMapper = new UserMapper();
+        userService = new UserService(userStorage, userMapper);
 
-        validUser = new User();
-        validUser.setEmail("test@example.com");
-        validUser.setLogin("testLogin");
-        validUser.setName("Test User");
-        validUser.setBirthday(LocalDate.of(1995, 10, 30));
+        validRequest = new CreateUserRequest();
+        validRequest.setEmail("test@example.com");
+        validRequest.setLogin("testLogin");
+        validRequest.setName("Test User");
+        validRequest.setBirthday(LocalDate.of(1995, 10, 30));
+
+        updateRequest = new UpdateUserRequest();
     }
 
     @Test
     void createUserSuccess() {
-        User createdUser = userService.create(validUser);
+        UserDto createdUser = userService.create(validRequest);
 
         assertNotNull(createdUser);
         assertNotNull(createdUser.getId());
@@ -43,89 +51,110 @@ public class UserServiceTest {
 
     @Test
     void createUserWithEmptyEmail() {
-        validUser.setEmail("");
+        validRequest.setEmail("");
 
         ValidationException exception = assertThrows(ValidationException.class,
-                () -> userService.create(validUser));
+                () -> userService.create(validRequest));
 
         assertEquals("Некорректный email", exception.getMessage());
     }
 
     @Test
     void createUserWithInvalidEmail() {
-        validUser.setEmail("invalid-email");
+        validRequest.setEmail("invalid-email"); // Используем validRequest
 
         ValidationException exception = assertThrows(ValidationException.class,
-                () -> userService.create(validUser));
+                () -> userService.create(validRequest));
 
         assertEquals("Некорректный email", exception.getMessage());
     }
 
     @Test
     void createUserWithEmptyLogin() {
-        validUser.setLogin("");
+        validRequest.setLogin(""); // Используем validRequest
 
         ValidationException exception = assertThrows(ValidationException.class,
-                () -> userService.create(validUser));
+                () -> userService.create(validRequest));
 
         assertEquals("Логин не может быть пустым или содержать пробелы", exception.getMessage());
     }
 
     @Test
     void createUserWithLoginContainingSpaces() {
-        validUser.setLogin("login with spaces");
+        validRequest.setLogin("login with spaces"); // Используем validRequest
 
         ValidationException exception = assertThrows(ValidationException.class,
-                () -> userService.create(validUser));
+                () -> userService.create(validRequest));
 
         assertEquals("Логин не может быть пустым или содержать пробелы", exception.getMessage());
     }
 
     @Test
     void createUserWithFutureBirthday() {
-        validUser.setBirthday(LocalDate.now().plusDays(1));
+        validRequest.setBirthday(LocalDate.now().plusDays(1)); // Используем validRequest
 
         ValidationException exception = assertThrows(ValidationException.class,
-                () -> userService.create(validUser));
+                () -> userService.create(validRequest));
 
         assertEquals("Дата рождения не может быть в будущем", exception.getMessage());
     }
 
     @Test
     void createUserWithEmptyNameShouldUseLogin() {
-        validUser.setName("");
+        validRequest.setName(""); // Используем validRequest
 
-        User createdUser = userService.create(validUser);
+        UserDto createdUser = userService.create(validRequest);
 
         assertEquals("testLogin", createdUser.getName());
     }
 
     @Test
     void createUserWithNullNameShouldUseLogin() {
-        validUser.setName(null);
+        validRequest.setName(null); // Используем validRequest
 
-        User createdUser = userService.create(validUser);
+        UserDto createdUser = userService.create(validRequest);
 
         assertEquals("testLogin", createdUser.getName());
     }
 
     @Test
     void updateUserSuccess() {
-        User createdUser = userService.create(validUser);
-        createdUser.setName("Updated Name");
-        createdUser.setEmail("updated@example.com");
+        UserDto createdUser = userService.create(validRequest);
 
-        User updatedUser = userService.update(createdUser);
+        updateRequest.setId(createdUser.getId());
+        updateRequest.setName("Updated Name");
+        updateRequest.setEmail("updated@example.com");
+        updateRequest.setLogin("updatedLogin");
+        updateRequest.setBirthday(LocalDate.of(1990, 1, 1));
+
+        UserDto updatedUser = userService.update(updateRequest);
 
         assertEquals("Updated Name", updatedUser.getName());
         assertEquals("updated@example.com", updatedUser.getEmail());
+        assertEquals("updatedLogin", updatedUser.getLogin());
+        assertEquals(LocalDate.of(1990, 1, 1), updatedUser.getBirthday());
+    }
+
+    @Test
+    void updateUserPartialUpdate() {
+        UserDto createdUser = userService.create(validRequest);
+
+        updateRequest.setId(createdUser.getId());
+        updateRequest.setName("Updated Name");
+
+        UserDto updatedUser = userService.update(updateRequest);
+
+        assertEquals("Updated Name", updatedUser.getName());
+        assertEquals("test@example.com", updatedUser.getEmail());
+        assertEquals("testLogin", updatedUser.getLogin());
+        assertEquals(LocalDate.of(1995, 10, 30), updatedUser.getBirthday());
     }
 
     @Test
     void findUserByIdSuccess() {
-        User createdUser = userService.create(validUser);
+        UserDto createdUser = userService.create(validRequest);
 
-        User foundUser = userService.findById(createdUser.getId());
+        UserDto foundUser = userService.findById(createdUser.getId());
 
         assertEquals(createdUser.getId(), foundUser.getId());
         assertEquals("test@example.com", foundUser.getEmail());
@@ -141,42 +170,42 @@ public class UserServiceTest {
 
     @Test
     void getAllUsers() {
-        userService.create(validUser);
+        userService.create(validRequest);
 
-        User anotherUser = new User();
-        anotherUser.setEmail("another@example.com");
-        anotherUser.setLogin("anotherUser");
-        anotherUser.setName("Another User");
-        anotherUser.setBirthday(LocalDate.of(1991, 1, 1));
-        userService.create(anotherUser);
+        CreateUserRequest anotherRequest = new CreateUserRequest();
+        anotherRequest.setEmail("another@example.com");
+        anotherRequest.setLogin("anotherUser");
+        anotherRequest.setName("Another User");
+        anotherRequest.setBirthday(LocalDate.of(1991, 1, 1));
+        userService.create(anotherRequest);
 
-        Collection<User> allUsers = userService.getAllUsers();
+        Collection<UserDto> allUsers = userService.getAllUsers();
 
         assertEquals(2, allUsers.size());
     }
 
     @Test
     void addFriendSuccess() {
-        User user1 = userService.create(validUser);
+        UserDto user1 = userService.create(validRequest);
 
-        User user2 = new User();
-        user2.setEmail("user2@example.com");
-        user2.setLogin("user2");
-        user2.setName("User 2");
-        user2.setBirthday(LocalDate.of(1991, 1, 1));
-        User createdUser2 = userService.create(user2);
+        CreateUserRequest user2Request = new CreateUserRequest();
+        user2Request.setEmail("user2@example.com");
+        user2Request.setLogin("user2");
+        user2Request.setName("User 2");
+        user2Request.setBirthday(LocalDate.of(1991, 1, 1));
+        UserDto user2 = userService.create(user2Request);
 
-        userService.addFriend(user1.getId(), createdUser2.getId());
+        userService.addFriend(user1.getId(), user2.getId());
 
-        Collection<User> friends = userService.getFriends(user1.getId());
+        Collection<UserDto> friends = userService.getFriends(user1.getId());
 
         assertEquals(1, friends.size());
-        assertEquals(createdUser2.getId(), friends.iterator().next().getId());
+        assertEquals(user2.getId(), friends.iterator().next().getId());
     }
 
     @Test
     void addSelfAsFriend() {
-        User createdUser = userService.create(validUser);
+        UserDto createdUser = userService.create(validRequest);
 
         ValidationException exception = assertThrows(ValidationException.class,
                 () -> userService.addFriend(createdUser.getId(), createdUser.getId()));
@@ -186,7 +215,7 @@ public class UserServiceTest {
 
     @Test
     void addFriendToNonExistentUser() {
-        User createdUser = userService.create(validUser);
+        UserDto createdUser = userService.create(validRequest);
 
         NotFoundException exception = assertThrows(NotFoundException.class,
                 () -> userService.addFriend(createdUser.getId(), 111L));
@@ -196,82 +225,82 @@ public class UserServiceTest {
 
     @Test
     void removeFriendSuccess() {
-        User user1 = userService.create(validUser);
+        UserDto user1 = userService.create(validRequest);
 
-        User user2 = new User();
-        user2.setEmail("user2@example.com");
-        user2.setLogin("user2");
-        user2.setName("User 2");
-        user2.setBirthday(LocalDate.of(1991, 1, 1));
-        User createdUser2 = userService.create(user2);
+        CreateUserRequest user2Request = new CreateUserRequest();
+        user2Request.setEmail("user2@example.com");
+        user2Request.setLogin("user2");
+        user2Request.setName("User 2");
+        user2Request.setBirthday(LocalDate.of(1991, 1, 1));
+        UserDto user2 = userService.create(user2Request);
 
-        userService.addFriend(user1.getId(), createdUser2.getId());
-        userService.removeFriend(user1.getId(), createdUser2.getId());
+        userService.addFriend(user1.getId(), user2.getId());
+        userService.removeFriend(user1.getId(), user2.getId());
 
-        Collection<User> friends = userService.getFriends(user1.getId());
+        Collection<UserDto> friends = userService.getFriends(user1.getId());
 
         assertTrue(friends.isEmpty());
     }
 
     @Test
     void getFriendsSuccess() {
-        User user1 = userService.create(validUser);
+        UserDto user1 = userService.create(validRequest);
 
-        User user2 = new User();
-        user2.setEmail("user2@example.com");
-        user2.setLogin("user2");
-        user2.setName("User 2");
-        user2.setBirthday(LocalDate.of(1991, 1, 1));
-        User createdUser2 = userService.create(user2);
+        CreateUserRequest user2Request = new CreateUserRequest();
+        user2Request.setEmail("user2@example.com");
+        user2Request.setLogin("user2");
+        user2Request.setName("User 2");
+        user2Request.setBirthday(LocalDate.of(1991, 1, 1));
+        UserDto user2 = userService.create(user2Request);
 
-        User user3 = new User();
-        user3.setEmail("user3@example.com");
-        user3.setLogin("user3");
-        user3.setName("User 3");
-        user3.setBirthday(LocalDate.of(1992, 1, 1));
-        User createdUser3 = userService.create(user3);
+        CreateUserRequest user3Request = new CreateUserRequest();
+        user3Request.setEmail("user3@example.com");
+        user3Request.setLogin("user3");
+        user3Request.setName("User 3");
+        user3Request.setBirthday(LocalDate.of(1992, 1, 1));
+        UserDto user3 = userService.create(user3Request);
 
-        userService.addFriend(user1.getId(), createdUser2.getId());
-        userService.addFriend(user1.getId(), createdUser3.getId());
+        userService.addFriend(user1.getId(), user2.getId());
+        userService.addFriend(user1.getId(), user3.getId());
 
-        Collection<User> friends = userService.getFriends(user1.getId());
+        Collection<UserDto> friends = userService.getFriends(user1.getId());
 
         assertEquals(2, friends.size());
-        boolean hasUser2 = friends.stream().anyMatch(u -> u.getId().equals(createdUser2.getId()));
-        boolean hasUser3 = friends.stream().anyMatch(u -> u.getId().equals(createdUser3.getId()));
+        boolean hasUser2 = friends.stream().anyMatch(u -> u.getId().equals(user2.getId()));
+        boolean hasUser3 = friends.stream().anyMatch(u -> u.getId().equals(user3.getId()));
         assertTrue(hasUser2);
         assertTrue(hasUser3);
     }
 
     @Test
     void getFriendsEmpty() {
-        User createdUser = userService.create(validUser);
+        UserDto createdUser = userService.create(validRequest);
 
-        Collection<User> friends = userService.getFriends(createdUser.getId());
+        Collection<UserDto> friends = userService.getFriends(createdUser.getId());
 
         assertTrue(friends.isEmpty());
     }
 
     @Test
     void getCommonFriends() {
-        User user1 = userService.create(validUser);
+        UserDto user1 = userService.create(validRequest);
 
-        User user2 = new User();
-        user2.setEmail("user2@example.com");
-        user2.setLogin("user2");
-        user2.setBirthday(LocalDate.of(1991, 1, 1));
-        userService.create(user2);
+        CreateUserRequest user2Request = new CreateUserRequest();
+        user2Request.setEmail("user2@example.com");
+        user2Request.setLogin("user2");
+        user2Request.setBirthday(LocalDate.of(1991, 1, 1));
+        UserDto user2 = userService.create(user2Request);
 
-        User commonFriend = new User();
-        commonFriend.setEmail("common@example.com");
-        commonFriend.setLogin("common");
-        commonFriend.setBirthday(LocalDate.of(1992, 1, 1));
-        userService.create(commonFriend);
+        CreateUserRequest commonRequest = new CreateUserRequest();
+        commonRequest.setEmail("common@example.com");
+        commonRequest.setLogin("common");
+        commonRequest.setBirthday(LocalDate.of(1992, 1, 1));
+        UserDto commonFriend = userService.create(commonRequest);
 
         userService.addFriend(user1.getId(), commonFriend.getId());
         userService.addFriend(user2.getId(), commonFriend.getId());
 
-        Collection<User> commonFriends = userService.getCommonFriends(user1.getId(), user2.getId());
+        Collection<UserDto> commonFriends = userService.getCommonFriends(user1.getId(), user2.getId());
 
         assertEquals(1, commonFriends.size());
         assertEquals(commonFriend.getId(), commonFriends.iterator().next().getId());
@@ -279,15 +308,15 @@ public class UserServiceTest {
 
     @Test
     void getCommonFriendsWithNoCommonFriends() {
-        User user1 = userService.create(validUser);
+        UserDto user1 = userService.create(validRequest);
 
-        User user2 = new User();
-        user2.setEmail("user2@example.com");
-        user2.setLogin("user2");
-        user2.setBirthday(LocalDate.of(1991, 1, 1));
-        userService.create(user2);
+        CreateUserRequest user2Request = new CreateUserRequest();
+        user2Request.setEmail("user2@example.com");
+        user2Request.setLogin("user2");
+        user2Request.setBirthday(LocalDate.of(1991, 1, 1));
+        UserDto user2 = userService.create(user2Request);
 
-        Collection<User> commonFriends = userService.getCommonFriends(user1.getId(), user2.getId());
+        Collection<UserDto> commonFriends = userService.getCommonFriends(user1.getId(), user2.getId());
 
         assertTrue(commonFriends.isEmpty());
     }

@@ -1,10 +1,13 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.dto.FilmDto;
+import ru.yandex.practicum.filmorate.dto.request.CreateFilmRequest;
+import ru.yandex.practicum.filmorate.dto.request.UpdateFilmRequest;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
 import java.util.Collection;
@@ -20,27 +23,26 @@ public class FilmController {
     }
 
     @GetMapping
-    public ResponseEntity<Collection<Film>> findAll() {
-        Collection<Film> films = filmService.findAll();
-        return ResponseEntity.ok(films);
+    public ResponseEntity<Collection<FilmDto>> findAll() {
+        return ResponseEntity.ok(filmService.findAll());
     }
 
     @GetMapping("/{filmId}")
-    public ResponseEntity<Film> findById(@PathVariable long filmId) {
-        Film findId = filmService.findById(filmId);
+    public ResponseEntity<FilmDto> findById(@PathVariable long filmId) {
+        FilmDto findId = filmService.findById(filmId);
         return ResponseEntity.ok(findId);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity<Film> create(@RequestBody Film film) {
-        Film createFilm = filmService.create(film);
+    public ResponseEntity<FilmDto> create(@Valid @RequestBody CreateFilmRequest request) {
+        FilmDto createFilm = filmService.create(request);
         return ResponseEntity.ok(createFilm);
     }
 
     @PutMapping
-    public ResponseEntity<Film> update(@RequestBody Film newFilm) {
-        Film updateFilm = filmService.update(newFilm);
+    public ResponseEntity<FilmDto> update(@RequestBody UpdateFilmRequest request) {
+        FilmDto updateFilm = filmService.update(request);
         return ResponseEntity.ok(updateFilm);
     }
 
@@ -57,9 +59,9 @@ public class FilmController {
     }
 
     @GetMapping("/popular")
-    public ResponseEntity<Collection<Film>> getPopularFilms(
+    public ResponseEntity<Collection<FilmDto>> getPopularFilms(
             @RequestParam(defaultValue = "10") @Min(1) int count) {
-        Collection<Film> popularFilms = filmService.getPopularFilms(count);
+        Collection<FilmDto> popularFilms = filmService.getPopularFilms(count);
         return ResponseEntity.ok(popularFilms);
     }
 }
